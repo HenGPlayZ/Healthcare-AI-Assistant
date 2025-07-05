@@ -50,7 +50,7 @@ pip install -r requirements.txt
 
 ### 1. Clone or Download the Project
 ```bash
-git clone https://github.com/HenGPlayZ/Healthcare-Assistant/
+git clone https://github.com/HenGPlayZ/Healthcare-AI-Assistant
 ```
 
 ### 2. Install Dependencies
