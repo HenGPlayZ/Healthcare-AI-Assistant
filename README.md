@@ -1,8 +1,10 @@
 # 🏥 Healthcare AI Assistant
 
 A modern, bilingual (English/Khmer) healthcare chatbot built with PyQt6 and powered by Google's Gemini AI. This desktop application provides health information and symptom analysis in an intuitive, professional interface.
-
+## 🖼️ Preview
+### ENG
 ![Healthcare AI Assistant 1](https://cdn.hengnation.dev/lXb.png)
+### KH
 ![Healthcare AI Assistant 2](https://cdn.hengnation.dev/9VJ.png)
 
 ## ✨ Features
