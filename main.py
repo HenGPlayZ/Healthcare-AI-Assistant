@@ -1,5 +1,6 @@
 import sys
 import os
+from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLineEdit, QPushButton, QLabel, QFrame, QScrollArea,
@@ -14,7 +15,6 @@ from config.styles import get_app_stylesheet, get_chat_bubble_style
 
 try:
     from dotenv import load_dotenv
-    load_dotenv("config/.env")
     DOTENV_AVAILABLE = True
 except ImportError:
     DOTENV_AVAILABLE = False
@@ -24,6 +24,22 @@ try:
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
+
+
+BASE_DIR = Path(__file__).parent
+
+if not (BASE_DIR / "config").exists() and (BASE_DIR.parent / "config").exists():
+    BASE_DIR = BASE_DIR.parent
+
+ASSETS_DIR = BASE_DIR / "assets"
+
+
+if DOTENV_AVAILABLE:
+    for env_file in [BASE_DIR / "config" / ".env", BASE_DIR / ".env"]:
+        if env_file.exists():
+            load_dotenv(str(env_file))
+            print(f"Loaded .env from: {env_file}")
+            break
 
 
 class GeminiWorker(QThread):
@@ -44,16 +60,37 @@ class GeminiWorker(QThread):
                 self.error_occurred.emit("Gemini API not available. Install google-generativeai package.")
                 return
 
+            if not self.api_key:
+                self.error_occurred.emit("API key not configured. Please check your .env file.")
+                return
+
             genai.configure(api_key=self.api_key)
             model = genai.GenerativeModel('gemini-2.0-flash')
 
-            prompt = get_prompt(self.mode, self.language, self.message)
+            generation_config = {
+                "temperature": 0.6,
+                "top_p": 0.7,
+                "max_output_tokens": 250,
+            }
 
-            response = model.generate_content(prompt)
-            self.response_ready.emit(response.text)
+            prompt = get_prompt(self.mode, self.language, self.message)
+            response = model.generate_content(prompt, generation_config=generation_config)
+
+            if response and response.text:
+                self.response_ready.emit(response.text)
+            else:
+                self.error_occurred.emit("Empty response from AI. Please try again.")
 
         except Exception as e:
-            self.error_occurred.emit(f"API Error: {str(e)}")
+            error_msg = str(e).lower()
+            if "api_key" in error_msg or "invalid" in error_msg:
+                self.error_occurred.emit("Invalid API key. Please check your configuration.")
+            elif "quota" in error_msg or "limit" in error_msg:
+                self.error_occurred.emit("API quota exceeded. Please try again later.")
+            elif "blocked" in error_msg or "safety" in error_msg:
+                self.error_occurred.emit("Response was blocked. Please rephrase your question.")
+            else:
+                self.error_occurred.emit("Connection error. Please check your internet connection.")
 
 
 class ModernButton(QPushButton):
@@ -130,7 +167,7 @@ class ModernChatBubble(QFrame):
         result = ''.join(formatted_lines)
 
         result = re.sub(r'<p[^>]*>\s*</p>', '', result)
-        
+
         return result
 
     def _apply_bubble_style(self):
@@ -144,7 +181,6 @@ class HealthBotDemoWindow(QMainWindow):
         super().__init__()
         self.language = "en"
         self.theme = "dark"
-
 
         self.api_key = self._load_api_key()
         self.gemini_worker = None
@@ -163,13 +199,15 @@ class HealthBotDemoWindow(QMainWindow):
         self._show_welcome_message()
 
     def _load_custom_fonts(self):
-        font_path = "assets/Dangrek-Regular.ttf"
-        font_id = QFontDatabase.addApplicationFont(font_path)
-        if font_id == -1:
-            print(f"Warning: Could not load font at '{font_path}'. Using system fonts.")
+        """Load custom fonts - simple version."""
+        font_path = ASSETS_DIR / "Dangrek-Regular.ttf"
+
+        if font_path.exists():
+            font_id = QFontDatabase.addApplicationFont(str(font_path))
+            if font_id != -1:
+                print("Custom font loaded successfully")
         else:
-            font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
-            print(f"Successfully loaded font: '{font_family}'")
+            print("Custom font not found, using system fonts")
 
     def _load_api_key(self):
         api_key = os.environ.get("GEMINI_API_KEY")
@@ -188,10 +226,14 @@ class HealthBotDemoWindow(QMainWindow):
         """Set up the main window properties."""
         self.setGeometry(100, 100, 900, 800)
         self.setMinimumSize(600, 500)
-        try:
-            self.setWindowIcon(QIcon("assets/icon.png"))
-        except Exception as e:
-            print(f"Icon not found: {e}. Using default icon.")
+
+        # Load window icon - simple version
+        icon_path = ASSETS_DIR / "icon.png"
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
+            print("Icon loaded successfully")
+        else:
+            print("Icon not found, using default")
 
     def _create_widgets(self):
         self.central_widget = QWidget()
@@ -219,12 +261,18 @@ class HealthBotDemoWindow(QMainWindow):
         self.health_query_button.setCheckable(True)
         self.symptom_checker_button = ModernButton()
         self.symptom_checker_button.setCheckable(True)
+
+        # Quick suggestion buttons
+        self.suggestions_frame = QFrame()
+        self.suggestions_frame.setMaximumHeight(80)
+        self.suggestion_buttons = []
+
         self.input_frame = QFrame()
-        self.input_frame.setMinimumHeight(60)
+        self.input_frame.setMinimumHeight(70)
         self.user_input = QLineEdit()
-        self.user_input.setMinimumHeight(40)
+        self.user_input.setMinimumHeight(45)
         self.send_button = ModernButton()
-        self.send_button.setMinimumSize(80, 40)
+        self.send_button.setMinimumSize(80, 45)
 
     def _create_layout(self):
         self.main_layout = QVBoxLayout(self.central_widget)
@@ -247,6 +295,17 @@ class HealthBotDemoWindow(QMainWindow):
         mode_layout.addWidget(self.mode_label)
         mode_layout.addLayout(mode_buttons_layout)
         mode_layout.setContentsMargins(24, 12, 24, 12)
+
+        # Create suggestion buttons layout
+        self._create_suggestion_buttons()
+        suggestions_layout = QHBoxLayout(self.suggestions_frame)
+        suggestions_layout.setContentsMargins(24, 8, 24, 8)
+        suggestions_layout.setSpacing(8)
+
+        for btn in self.suggestion_buttons:
+            suggestions_layout.addWidget(btn)
+        suggestions_layout.addStretch()
+
         input_layout = QHBoxLayout(self.input_frame)
         input_layout.addWidget(self.user_input, 1)
         input_layout.addWidget(self.send_button)
@@ -255,6 +314,7 @@ class HealthBotDemoWindow(QMainWindow):
         self.main_layout.addWidget(self.header_frame)
         self.main_layout.addWidget(self.chat_scroll, 1)
         self.main_layout.addWidget(self.mode_button_frame)
+        self.main_layout.addWidget(self.suggestions_frame)
         self.main_layout.addWidget(self.input_frame)
 
     def _connect_signals(self):
@@ -331,6 +391,8 @@ class HealthBotDemoWindow(QMainWindow):
         """Toggles the language and updates the UI."""
         self.language = "km" if self.language == "en" else "en"
         self.update_ui_text()
+        self._create_suggestion_buttons()
+        self._update_suggestions_layout()
         self._post_system_message(
             self.ui_text[self.language]["switched_to_km" if self.language == "km" else "switched_to_en"])
 
@@ -338,7 +400,7 @@ class HealthBotDemoWindow(QMainWindow):
         self.theme = "dark" if self.theme == "light" else "light"
         UI_TEXT["en"]["theme_btn"] = "☀️" if self.theme == "dark" else "🌙"
         UI_TEXT["km"]["theme_btn"] = "☀️" if self.theme == "dark" else "🌙"
-        
+
         self.update_ui_text()
         self._apply_styles()
         self._refresh_chat_bubbles()
@@ -350,16 +412,86 @@ class HealthBotDemoWindow(QMainWindow):
             self._add_chat_bubble(message, sender, is_user, save_to_history=False)
         self._show_welcome_message()
 
+    def _create_suggestion_buttons(self):
+        """Create quick suggestion buttons based on current mode and language."""
+        # Clear existing buttons
+        for btn in self.suggestion_buttons:
+            btn.deleteLater()
+        self.suggestion_buttons.clear()
+
+        # Define suggestions for each mode and language
+        suggestions = {
+            'health': {
+                'en': ['💊 Medication Info', '🏃 Exercise Tips', '🥗 Nutrition Help', '😴 Sleep Issues'],
+                'km': ['💊 ព័ត៌មានឱសថ', '🏃 គន្លឹះហាត់ប្រាណ', '🥗 ជំនួយអាហារូបត្ថម្ភ', '😴 បញ្ហាគេង']
+            },
+            'symptom': {
+                'en': ['🤒 Fever & Chills', '🤕 Headache', '😷 Cold Symptoms', '🤧 Allergies'],
+                'km': ['🤒 គ្រុនក្តៅ', '🤕 ឈឺក្បាល', '😷 រោគសញ្ញាផ្តាសាយ', '🤧 អាលែកហ្សុី']
+            }
+        }
+
+        mode = 'health' if self.health_query_button.isChecked() else 'symptom'
+        current_suggestions = suggestions[mode][self.language]
+
+        for suggestion in current_suggestions:
+            btn = ModernButton(suggestion)
+            btn.setMaximumHeight(35)
+            btn.setMinimumWidth(120)  # Fixed minimum width
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: rgba(100, 149, 237, 0.1);
+                    border: 1px solid rgba(100, 149, 237, 0.3);
+                    border-radius: 18px;
+                    padding: 6px 12px;
+                    font-size: 12px;
+                    color: #4a90e2;
+                    text-align: center;
+                }
+                QPushButton:hover {
+                    background-color: rgba(100, 149, 237, 0.2);
+                    border-color: rgba(100, 149, 237, 0.5);
+                }
+                QPushButton:pressed {
+                    background-color: rgba(100, 149, 237, 0.3);
+                }
+            """)
+            btn.clicked.connect(lambda checked, text=suggestion: self._use_suggestion(text))
+            self.suggestion_buttons.append(btn)
+
+    def _use_suggestion(self, suggestion_text):
+        """Use a suggestion as input."""
+        # Extract just the text part (remove emoji)
+        clean_text = suggestion_text.split(' ', 1)[1] if ' ' in suggestion_text else suggestion_text
+        self.user_input.setText(clean_text)
+        self.user_input.setFocus()
+
     def send_message(self):
         user_message = self.user_input.text().strip()
-        if not user_message or self.is_typing:
+
+        # Input validation with better UX
+        if not user_message:
+            self._shake_input()
+            return
+
+        if len(user_message) > 500:
+            self._show_input_hint("Message too long (max 500 characters)")
+            return
+
+        if self.is_typing:
             return
 
         lang = self.language
         self._add_chat_bubble(user_message, self.ui_text[lang]["you"], True)
         self.user_input.clear()
         self.is_typing = True
+
+        # Disable send button and show loading state
+        self.send_button.setEnabled(False)
+        self.send_button.setText("⏳" if lang == "en" else "⏳")
+
         self._show_typing_indicator()
+
         if GEMINI_AVAILABLE and self.api_key:
             mode = 'health' if self.health_query_button.isChecked() else 'symptom'
             self.gemini_worker = GeminiWorker(user_message, mode, lang, self.api_key)
@@ -368,6 +500,18 @@ class HealthBotDemoWindow(QMainWindow):
             self.gemini_worker.start()
         else:
             QTimer.singleShot(1000, lambda: self._send_mock_response(lang))
+
+    def _shake_input(self):
+        """Visual feedback for empty input."""
+        original_style = self.user_input.styleSheet()
+        self.user_input.setStyleSheet(original_style + "border: 2px solid #ff6b6b;")
+        QTimer.singleShot(1000, lambda: self.user_input.setStyleSheet(original_style))
+
+    def _show_input_hint(self, message):
+        """Show temporary hint below input field."""
+        self.user_input.setPlaceholderText(message)
+        QTimer.singleShot(3000, lambda: self.user_input.setPlaceholderText(
+            self.ui_text[self.language]["input_placeholder"]))
 
     def _show_typing_indicator(self):
         lang = self.language
@@ -378,15 +522,23 @@ class HealthBotDemoWindow(QMainWindow):
 
     def _handle_gemini_response(self, response_text):
         self._remove_typing_indicator()
+        self._reset_send_button()
         lang = self.language
         self._add_chat_bubble(response_text, self.ui_text[lang]["bot"], False)
         self.is_typing = False
 
     def _handle_gemini_error(self, error_message):
         self._remove_typing_indicator()
+        self._reset_send_button()
         lang = self.language
         self._post_system_message(f"⚠️ {error_message}")
         self._send_mock_response(lang)
+
+    def _reset_send_button(self):
+        """Reset send button to normal state."""
+        self.send_button.setEnabled(True)
+        lang = self.language
+        self.send_button.setText(self.ui_text[lang]["send_btn"])
 
     def _remove_typing_indicator(self):
         if self.chat_layout.count() > 0:
@@ -400,12 +552,15 @@ class HealthBotDemoWindow(QMainWindow):
             bot_response = self.ui_text[lang]["mock_symptom_response"]
 
         self._add_chat_bubble(bot_response, self.ui_text[lang]["bot"], False)
+        self._reset_send_button()
         self.is_typing = False
 
     def set_health_query_mode(self, from_click=False):
         self.health_query_button.setChecked(True)
         self.symptom_checker_button.setChecked(False)
         self.mode_label.setText(self.ui_text[self.language]["mode_label_health"])
+        self._create_suggestion_buttons()
+        self._update_suggestions_layout()
         if from_click:
             self._post_system_message(self.ui_text[self.language]["switched_to_health"])
 
@@ -413,8 +568,29 @@ class HealthBotDemoWindow(QMainWindow):
         self.symptom_checker_button.setChecked(True)
         self.health_query_button.setChecked(False)
         self.mode_label.setText(self.ui_text[self.language]["mode_label_symptom"])
+        self._create_suggestion_buttons()
+        self._update_suggestions_layout()
         if from_click:
             self._post_system_message(self.ui_text[self.language]["switched_to_symptom"])
+
+    def _update_suggestions_layout(self):
+        """Update suggestion buttons in the layout."""
+        layout = self.suggestions_frame.layout()
+        if layout:
+            # Clear existing items from layout completely
+            while layout.count():
+                child = layout.takeAt(0)
+                if child.widget():
+                    child.widget().setParent(None)
+
+            # Re-add new buttons with proper spacing
+            for btn in self.suggestion_buttons:
+                layout.addWidget(btn)
+            layout.addStretch()  # Push buttons to the left
+
+            # Force layout update
+            self.suggestions_frame.update()
+            self.suggestions_frame.repaint()
 
     def _apply_styles(self):
         font = QFont("Segoe UI", 15)
