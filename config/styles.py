@@ -64,7 +64,6 @@ def get_app_stylesheet(theme="light"):
             background-color: {accent_color};
             color: white;
             border-color: {accent_color};
-            box-shadow: 0 2px 8px {shadow};
         }}
 
         ModernButton:checked {{
@@ -104,18 +103,17 @@ def get_app_stylesheet(theme="light"):
             background-color: {input_bg};
             border: 2px solid {border_color};
             border-radius: 12px;
-            padding: 12px 16px;
+            padding: 15px 16px;
             font-size: 15px;
             color: {text_primary};
             font-family: "Segoe UI", "Roboto", "Inter", sans-serif;
-            min-height: 20px;
-            line-height: 1.4;
+            min-height: 25px;
+            line-height: 1.6;
         }}
 
         QLineEdit:focus {{
             border-color: {accent_color};
             background-color: {input_bg};
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }}
 
         QPushButton#send_button {{
@@ -131,7 +129,6 @@ def get_app_stylesheet(theme="light"):
 
         QPushButton#send_button:hover {{
             background-color: #5a67d8;
-            box-shadow: 0 4px 12px {shadow};
         }}
 
         QPushButton#send_button:pressed {{
@@ -185,7 +182,6 @@ def get_chat_bubble_style(is_user, theme="light"):
                     margin-right: 16px;
                     margin-top: 8px;
                     margin-bottom: 8px;
-                    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
                 }
                 #senderLabel { 
                     color: rgba(255,255,255,0.9); 
@@ -211,7 +207,6 @@ def get_chat_bubble_style(is_user, theme="light"):
                     margin-right: 16px;
                     margin-top: 8px;
                     margin-bottom: 8px;
-                    box-shadow: 0 2px 8px rgba(96, 165, 250, 0.2);
                 }
                 #senderLabel { 
                     color: rgba(255,255,255,0.9); 
@@ -238,7 +233,6 @@ def get_chat_bubble_style(is_user, theme="light"):
                     margin-left: 16px;
                     margin-top: 8px;
                     margin-bottom: 8px;
-                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
                 }
                 #senderLabel { 
                     color: #667eea; 
@@ -264,7 +258,6 @@ def get_chat_bubble_style(is_user, theme="light"):
                     margin-left: 16px;
                     margin-top: 8px;
                     margin-bottom: 8px;
-                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
                 }
                 #senderLabel { 
                     color: #60a5fa; 
