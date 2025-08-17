@@ -1,40 +1,40 @@
 
-HEALTH_QUERY_PROMPT_EN = """As a healthcare assistant, provide helpful health information about: {message}
+HEALTH_QUERY_PROMPT_EN = """As a healthcare assistant, provide brief health information about: {message}
 
-Please include:
-- Key health facts
-- Simple recommendations
-- When to see a doctor
+Give me ONLY:
+- 1-2 key facts (max 2 sentences)
+- 1 simple recommendation
+- When to see doctor (1 sentence)
 
-Keep your response concise and easy to understand. Always remind users to consult healthcare professionals for medical advice."""
+Keep response under 100 words. Be concise."""
 
-HEALTH_QUERY_PROMPT_KM = """ជាជំនួយការសុខភាព សូមផ្តល់ព័ត៌មានសុខភាពមានប្រយោជន៍អំពី: {message}
+HEALTH_QUERY_PROMPT_KM = """ជាជំនួយការសុខភាព សូមផ្តល់ព័ត៌មានសុខភាពខ្លីអំពី: {message}
 
-សូមរួមបញ្ចូល៖
-- ការពិតសុខភាពសំខាន់ៗ
-- ការណែនាំសាមញ្ញ
-- ពេលណាត្រូវជួបគ្រូពេទ្យ
+ផ្តល់ឱ្យខ្ញុំតែ៖
+- ការពិតសំខាន់ 1-2 (អតិបរមា 2 ប្រយោគ)
+- ការណែនាំសាមញ្ញ 1
+- ពេលណាត្រូវជួបគ្រូពេទ្យ (1 ប្រយោគ)
 
-រក្សាចម្លើយរបស់អ្នកឱ្យខ្លី និងងាយយល់។ តែងតែរំលឹកអ្នកប្រើប្រាស់ឱ្យពិគ្រោះជាមួយអ្នកជំនាញសុខភាពសម្រាប់ការប្រឹក្សាពេទ្យ។"""
+រក្សាចម្លើយឱ្យក្រោម 100 ពាក្យ។ សង្ខេប។"""
 
 # Symptom analysis prompt templates
-SYMPTOM_PROMPT_EN = """As a healthcare assistant, analyze these symptoms: {message}
+SYMPTOM_PROMPT_EN = """Analyze these symptoms briefly: {message}
 
-Please provide:
-- What might cause these symptoms (2-3 possibilities)
-- Simple self-care recommendations
-- When to see a doctor
+Provide:
+- 2-3 possible causes with brief explanations
+- 2 simple self-care tips
+- Clear guidance on when to see a doctor
 
-Keep it brief and clear. Remember: This is not a medical diagnosis - always consult healthcare professionals for proper evaluation."""
+Keep under 150 words. Be helpful but direct."""
 
-SYMPTOM_PROMPT_KM = """ជាជំនួយការសុខភាព សូមវិភាគរោគសញ្ញាទាំងនេះ៖ {message}
+SYMPTOM_PROMPT_KM = """វិភាគរោគសញ្ញាទាំងនេះ៖ {message}
 
-សូមផ្តល់៖
-- អ្វីដែលអាចបណ្តាលឱ្យមានរោគសញ្ញាទាំងនេះ (ទំនាកទំនង ២-៣)
-- ការណែនាំថែទាំខ្លួនឯងសាមញ្ញ
-- ពេលណាត្រូវជួបគ្រូពេទ្យ
+ផ្តល់៖
+- មូលហេតុអាចមាន 2-3 ជាមួយការពន្យល់ខ្លី
+- គន្លឹះថែទាំខ្លួនឯង 2
+- ការណែនាំច្បាស់លាស់ពេលណាត្រូវជួបគ្រូពេទ្យ
 
-រក្សាឱ្យខ្លី និងច្បាស់លាស់។ ចំណាំ៖ នេះមិនមែនជាការធ្វើរោគវិនិច្ឆ័យវេជ្ជសាស្ត្រនោះទេ - តែងតែពិគ្រោះជាមួយអ្នកជំនាញសុខភាពសម្រាប់ការវាយតម្លៃត្រឹមត្រូវ។"""
+រក្សាក្រោម 150 ពាក្យ។ ជួយប្រយោជន៍ប៉ុន្តែត្រង់ចំណុច។"""
 
 def get_prompt(mode, language, message):
     if mode == 'health':
